@@ -1,9 +1,12 @@
 #!/bin/bash
 set -ex
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $DIR/..
 
 echo "Running make"
 
-touch /tmp/make.out
+LOGFILE=/tmp/build_script.out
+touch $LOGFILE
 
 export RELEASE_NOTES="$(git log -1 --pretty=format:%B)"
 
@@ -14,18 +17,17 @@ export RELEASE_NOTES="$(git log -1 --pretty=format:%B)"
     let COUNTER=COUNTER+1
     sleep 60
     echo "Muted, but still building. Last 100 lines:"
-    tail -100 /tmp/make.out
+    tail -100 $LOGFILE
   done
   echo "Timing out after 30 minutes."
 ) &
 MUTED_PID=$!
 
 echo "Running make for dependencies"
-make >> /tmp/make.out 2>&1
+$DIR/compile.sh >> $LOGFILE 2>&1
 
-tail -1000 /tmp/make.out
+tail -1000 $LOGFILE
 kill $MUTED_PID
 
 echo exit $MAKE_RESULT
 exit $MAKE_RESULT
-
