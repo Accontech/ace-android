@@ -1663,14 +1663,7 @@ public class InCallActivity extends FragmentActivity implements OnClickListener 
 			LinphoneManager.getLc().setPreviewWindow(null);
 		}
 
-
-		video.postDelayed(new Runnable() {
-			@Override
-			public void run() {
-				call.sendInfoMessage(message);
-
-			}
-		}, 3000);
+		call.sendInfoMessage(message);
 
 		//This line remains for other platforms. To force the video to unfreeze.
 
