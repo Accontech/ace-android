@@ -108,7 +108,7 @@ public class ContactSyncAsyncTask extends AsyncTask<Void, Void, Void> implements
         boolean need_new_account = true;
         if(authInfos!= null) {
             for (int i = 0; i < authInfos.length; i++) {
-                if (authInfos[i].getDomain().equals(serverDomain)) {
+                if (authInfos[i].getDomain()!= null && authInfos[i].getDomain().equals(serverDomain)) {
                     if (!authInfos[i].getUsername().equals(username) || authInfos[i].getPassword() == null || !authInfos[i].getPassword().equals(password)) {
                         lc.removeAuthInfo(authInfos[i]);
                     } else {

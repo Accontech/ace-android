@@ -234,44 +234,41 @@ public class ContactUtils {
             }
             else// we need to update if the contact is changed
             {
-
+                boolean isContactChanged = isFriendContactChanged(friend, contact);
+                Log.d("vcard_sync updating contact " + isContactChanged + " name : " + friend.getName());
+                if (isContactChanged) {
                     friend.edit();
                     friend.setName(contact.getName());
-
 
                     String[] numbers = friend.getPhoneNumbers();
                     LinphoneAddress[] addresses = friend.getAddresses();
 
-
                     for (String number : numbers) {
                         friend.removePhoneNumber(number);
                     }
-                    for (LinphoneAddress address: addresses) {
+                    for (LinphoneAddress address : addresses) {
                         friend.removeAddress(address);
                     }
 
-                boolean addressIsSet = false;
-                for (String contactNumber : contact.getNumbersOrAddresses())
-                {
-                    if(SIP_URI_PATTERN.matcher(contactNumber).matches() ) {
-                        try {
-                            LinphoneAddress address = LinphoneCoreFactory.instance().createLinphoneAddress(contactNumber);
-                            if(!addressIsSet)
-                            {
-                                friend.setAddress(address);
-                                addressIsSet = true;
+                    boolean addressIsSet = false;
+                    for (String contactNumber : contact.getNumbersOrAddresses()) {
+                        if (SIP_URI_PATTERN.matcher(contactNumber).matches()) {
+                            try {
+                                LinphoneAddress address = LinphoneCoreFactory.instance().createLinphoneAddress(contactNumber);
+                                if (!addressIsSet) {
+                                    friend.setAddress(address);
+                                    addressIsSet = true;
+                                } else
+                                    friend.addAddress(address);
+                            } catch (LinphoneCoreException e) {
+                                e.printStackTrace();
                             }
-                            else
-                                friend.addAddress(address);
-                        } catch (LinphoneCoreException e) {
-                            e.printStackTrace();
-                        }
+                        } else
+                            friend.addPhoneNumber(contactNumber);
                     }
-                    else
-                        friend.addPhoneNumber(contactNumber);
-                }
 
-                friend.done();
+                    friend.done();
+                }
             }
 
 
@@ -479,6 +476,29 @@ public class ContactUtils {
         }
     }
 
+    private static boolean isFriendContactChanged(LinphoneFriend linphoneFriend, Contact contact) {
+        if (!linphoneFriend.getName().contentEquals(contact.getName()))
+            return true;
+
+        ArrayList<String> friendNumbersOrAddresses = new ArrayList<String>();
+        String[] friendPhoneNumbers = linphoneFriend.getPhoneNumbers();
+        LinphoneAddress[] friendAddresses = linphoneFriend.getAddresses();
+
+        for (String friendNumber : friendPhoneNumbers)
+            friendNumbersOrAddresses.add(friendNumber);
+        for (LinphoneAddress linphoneAddress : friendAddresses)
+            friendNumbersOrAddresses.add(linphoneAddress.asStringUriOnly());
+        ArrayList<String> contactNumbersOrAddresses = (ArrayList<String>) contact.getNumbersOrAddresses();
+
+        if (contactNumbersOrAddresses.size() != friendNumbersOrAddresses.size())
+            return true;
+
+        for (int i = 0; i < contactNumbersOrAddresses.size(); i++)
+            if (!friendNumbersOrAddresses.contains(contactNumbersOrAddresses.get(i)))
+                return true;
+
+        return false;
+    }
 
 
 }
