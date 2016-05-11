@@ -975,13 +975,13 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 		}
 
 		LinearLayout ll = (LinearLayout) findViewById(R.id.fragmentContainer2);
-		ImageView sssll = (ImageView) findViewById(R.id.image_logo);
+		ImageView app_logo = (ImageView) findViewById(R.id.image_logo);
 
 		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 		if (newFragmentType.shouldAddItselfToTheRightOf(currentFragment)) {
 			ll.setVisibility(View.VISIBLE);
-			if (sssll != null)
-				sssll.setVisibility(View.GONE);
+			if (app_logo != null)
+				app_logo.setVisibility(View.GONE);
 
 			transaction.addToBackStack(newFragmentType.toString());
 			transaction.replace(R.id.fragmentContainer2, newFragment);
@@ -993,12 +993,12 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 					|| newFragmentType == FragmentsAvailable.SETTINGS
 					|| newFragmentType == FragmentsAvailable.ACCOUNT_SETTINGS) {
 				ll.setVisibility(View.GONE);
-				if (sssll != null)
-					sssll.setVisibility(View.GONE);
+				if (app_logo != null)
+					app_logo.setVisibility(View.GONE);
 			} else {
 				ll.setVisibility(View.GONE);
-				if (sssll != null)
-					sssll.setVisibility(View.VISIBLE);
+				if (app_logo != null)
+					app_logo.setVisibility(View.VISIBLE);
 			}
 
 			if (!withoutAnimation && !isAnimationDisabled && currentFragment.shouldAnimate()) {
@@ -1037,11 +1037,12 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 		if (getSupportFragmentManager().findFragmentById(R.id.fragmentContainer2) != null) {
 
 			LinearLayout ll = (LinearLayout) findViewById(R.id.fragmentContainer2);
-			ImageView sssll = (ImageView) findViewById(R.id.image_logo);
+			ImageView app_logo = (ImageView) findViewById(R.id.image_logo);
 
 			if (currentFragment.shouldAddItselfToTheRightOf(currentFragment)) {
 				ll.setVisibility(View.VISIBLE);
-				sssll.setVisibility(View.GONE);
+				if (app_logo != null)
+					app_logo.setVisibility(View.GONE);
 
 			} else {
 				if (currentFragment == FragmentsAvailable.DIALER
@@ -1051,10 +1052,12 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 						|| currentFragment == FragmentsAvailable.SETTINGS
 						|| currentFragment == FragmentsAvailable.ACCOUNT_SETTINGS) {
 					ll.setVisibility(View.GONE);
-					sssll.setVisibility(View.GONE);
+					if (app_logo != null)
+						app_logo.setVisibility(View.GONE);
 				} else {
 					ll.setVisibility(View.GONE);
-					sssll.setVisibility(View.VISIBLE);
+					if (app_logo != null)
+						app_logo.setVisibility(View.VISIBLE);
 				}
 			}
 		}
