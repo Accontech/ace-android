@@ -66,7 +66,6 @@ import android.widget.Toast;
 
 import net.hockeyapp.android.CrashManager;
 import net.hockeyapp.android.CrashManagerListener;
-import net.hockeyapp.android.StringListener;
 import net.hockeyapp.android.UpdateManager;
 
 import org.json.JSONObject;
@@ -117,7 +116,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static android.content.Intent.ACTION_MAIN;
 import static org.linphone.LinphoneManager.getLc;
@@ -977,10 +975,13 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 		}
 
 		LinearLayout ll = (LinearLayout) findViewById(R.id.fragmentContainer2);
+		ImageView sssll = (ImageView) findViewById(R.id.image_logo);
 
 		FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 		if (newFragmentType.shouldAddItselfToTheRightOf(currentFragment)) {
 			ll.setVisibility(View.VISIBLE);
+			if (sssll != null)
+				sssll.setVisibility(View.GONE);
 
 			transaction.addToBackStack(newFragmentType.toString());
 			transaction.replace(R.id.fragmentContainer2, newFragment);
@@ -992,8 +993,12 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 					|| newFragmentType == FragmentsAvailable.SETTINGS
 					|| newFragmentType == FragmentsAvailable.ACCOUNT_SETTINGS) {
 				ll.setVisibility(View.GONE);
+				if (sssll != null)
+					sssll.setVisibility(View.GONE);
 			} else {
-				ll.setVisibility(View.INVISIBLE);
+				ll.setVisibility(View.GONE);
+				if (sssll != null)
+					sssll.setVisibility(View.VISIBLE);
 			}
 
 			if (!withoutAnimation && !isAnimationDisabled && currentFragment.shouldAnimate()) {
@@ -1024,6 +1029,36 @@ public class LinphoneActivity extends FragmentActivity implements OnClickListene
 			}
 		}
 		fragmentsHistory.add(currentFragment);
+	}
+
+	@Override
+	public void onBackPressed() {
+
+		if (getSupportFragmentManager().findFragmentById(R.id.fragmentContainer2) != null) {
+
+			LinearLayout ll = (LinearLayout) findViewById(R.id.fragmentContainer2);
+			ImageView sssll = (ImageView) findViewById(R.id.image_logo);
+
+			if (currentFragment.shouldAddItselfToTheRightOf(currentFragment)) {
+				ll.setVisibility(View.VISIBLE);
+				sssll.setVisibility(View.GONE);
+
+			} else {
+				if (currentFragment == FragmentsAvailable.DIALER
+						|| currentFragment == FragmentsAvailable.ABOUT
+						|| currentFragment == FragmentsAvailable.ABOUT_INSTEAD_OF_CHAT
+						|| currentFragment == FragmentsAvailable.ABOUT_INSTEAD_OF_SETTINGS
+						|| currentFragment == FragmentsAvailable.SETTINGS
+						|| currentFragment == FragmentsAvailable.ACCOUNT_SETTINGS) {
+					ll.setVisibility(View.GONE);
+					sssll.setVisibility(View.GONE);
+				} else {
+					ll.setVisibility(View.GONE);
+					sssll.setVisibility(View.VISIBLE);
+				}
+			}
+		}
+		super.onBackPressed();
 	}
 
 	public void displayHistoryDetail(String sipUri, LinphoneCallLog log) {
