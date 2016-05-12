@@ -241,10 +241,12 @@ public class ApiFivePlus {
 
 				String id = cursor.getString(cursor.getColumnIndex(Data.CONTACT_ID));
 				String name = getContactDisplayName(cursor);
+
 				Uri thumbnail = getContactPictureUri(id);
 				Uri photo = getContactPhotoUri(id);
 				InputStream input = getContactPictureInputStream(cr, id);
 
+				boolean isfavorite = getIfFavorite(cr, id);
 				Contact contact;
 				if (input == null) {
 					contact = new Contact(id, name);
@@ -256,6 +258,8 @@ public class ApiFivePlus {
 					}
 					contact = new Contact(id, name, photo, thumbnail, bm);
 				}
+
+				contact.setFavorite(isfavorite);
 
 				return contact;
 			} else {
@@ -285,7 +289,14 @@ public class ApiFivePlus {
 		Uri person = ContentUris.withAppendedId(Contacts.CONTENT_URI, Long.parseLong(id));
 		return Uri.withAppendedPath(person, Contacts.Photo.DISPLAY_PHOTO);
 	}
-	
+	private static boolean getIfFavorite(ContentResolver cr, String id)
+	{
+		Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI, null, "starred=? and " + Contacts._ID + " =?",
+				new String[] {"1", id}, null);
+		int count = cur.getCount();
+		cur.close();
+		return count > 0;
+	}
 	public static Uri findUriPictureOfContactAndSetDisplayName(LinphoneAddress address, ContentResolver cr) {
 		String username = address.getUserName();
 		String domain = address.getDomain();

@@ -59,7 +59,7 @@ import io.App;
  * @author Sylvain Berfini
  */
 @SuppressLint("DefaultLocale")
-public class ContactsFragment extends Fragment implements OnClickListener, OnItemClickListener {
+public class ContactsFragment extends Fragment implements OnClickListener, OnItemClickListener, ContactsManager.ContactLoadingListener {
 	private LayoutInflater mInflater;
 	private ListView contactsList;
 	private TextView import_export_Contacts, allContacts, aceFavorites, newContact, noFavoriteContact, noContact;
@@ -82,6 +82,8 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 		return instance;
 	}
 
+	ContactsListAdapter mAdapter;
+
 	@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, 
         Bundle savedInstanceState) {
@@ -101,6 +103,8 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
         contactsList = (ListView) view.findViewById(R.id.contactsList);
         contactsList.setOnItemClickListener(this);
 
+		mAdapter = new ContactsListAdapter(null, null);
+		contactsList.setAdapter(mAdapter);
 		if(LinphonePreferences.instance().areAnimationsEnabled()) {
 			LayoutAnimationController lac = new LayoutAnimationController(AnimationUtils.loadAnimation(getActivity(), R.anim.slide_in_right_to_left), 0.1f); //0.5f == time between appearance of listview items.
 			contactsList.setLayoutAnimation(lac);
@@ -145,7 +149,6 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 				searchContacts(searchField.getText().toString());
 			}
 		});
-
 		return view;
     }
 
@@ -201,11 +204,15 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 		if (onlyDisplayAceFavorites) {
 			searchCursor = Compatibility.getFavoriteContactsCursor(getActivity().getContentResolver(), search, ContactsManager.getInstance().getContactsId());
 			indexer = new AlphabetIndexer(searchCursor, Compatibility.getCursorDisplayNameColumnIndex(searchCursor), " ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			contactsList.setAdapter(new ContactsListAdapter(null, searchCursor));
+			//contactsList.setAdapter(new ContactsListAdapter(null, searchCursor));
+			mAdapter.setData(null, searchCursor);
 		} else {
-			searchCursor = Compatibility.getContactsCursor(getActivity().getContentResolver(), search, ContactsManager.getInstance().getContactsId());
+
+
+			searchCursor = Compatibility.getContactsCursor(getActivity().getContentResolver(), search, null);
 			indexer = new AlphabetIndexer(searchCursor, Compatibility.getCursorDisplayNameColumnIndex(searchCursor), " ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-			contactsList.setAdapter(new ContactsListAdapter(null, searchCursor));
+			//contactsList.setAdapter(new ContactsListAdapter(null, searchCursor));
+			mAdapter.setData(null, searchCursor);
 		}
 	}
 	
@@ -216,9 +223,9 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 			searchCursor.close();
 		}
 
-		
+
 		Cursor allContactsCursor = ContactsManager.getInstance().getAllContactsCursor();
-		Cursor sipContactsCursor = ContactsManager.getInstance().getSIPContactsCursor();
+		//Cursor sipContactsCursor = ContactsManager.getInstance().getSIPContactsCursor();
 		Cursor favoriteContactsCursor = ContactsManager.getInstance().getFavoriteContactsCursor();
 		if(ContactsManager.getInstance().getAllContactsCursor()==null)
 			return;
@@ -233,7 +240,8 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 				contactsList.setVisibility(View.GONE);
 			} else {
 				indexer = new AlphabetIndexer(favoriteContactsCursor, Compatibility.getCursorDisplayNameColumnIndex(favoriteContactsCursor), " ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-				contactsList.setAdapter(new ContactsListAdapter(ContactsManager.getInstance().getFavoriteContacts(), favoriteContactsCursor));
+				mAdapter.setData(ContactsManager.getInstance().getFavoriteContacts(), favoriteContactsCursor);
+				//contactsList.setAdapter(new ContactsListAdapter(ContactsManager.getInstance().getFavoriteContacts(), favoriteContactsCursor));
 			}
 		} else {
 			if (allContactsCursor != null && allContactsCursor.getCount() == 0) {
@@ -241,7 +249,8 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 				contactsList.setVisibility(View.GONE);
 			} else {
 				indexer = new AlphabetIndexer(allContactsCursor, Compatibility.getCursorDisplayNameColumnIndex(allContactsCursor), " ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-				contactsList.setAdapter(new ContactsListAdapter(ContactsManager.getInstance().getAllContacts(), allContactsCursor));
+				mAdapter.setData(ContactsManager.getInstance().getAllContacts(), allContactsCursor);
+				//contactsList.setAdapter(new ContactsListAdapter(ContactsManager.getInstance().getAllContacts(), allContactsCursor));
 			}
 		}
 		ContactsManager.getInstance().setLinphoneContactsPrefered(onlyDisplayAceFavorites);
@@ -273,6 +282,7 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 	public void onResume() {
 		instance = this;
 		super.onResume();
+		ContactsManager.getInstance().setContactListener(this);
 		// carddav sync doesn't provide finished callback so workaround untill the callback will be providedgir
 		ContactsManager.getInstance().prepareContactsInBackground();
 		
@@ -295,6 +305,7 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 	
 	@Override
 	public void onPause() {
+		ContactsManager.getInstance().setContactListener(null);
 		instance = null;
 		if (searchCursor != null) {
 			searchCursor.close();
@@ -310,7 +321,18 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 		}
 		contactsList.setSelectionFromTop(lastKnownPosition, 0);
 	}
-	
+
+	@Override
+	public void onContactsLoaded() {
+		getActivity().runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				searchContacts();
+			}
+		});
+
+	}
+
 	class ContactsListAdapter extends BaseAdapter implements SectionIndexer {
 		private int margin;
 		private Bitmap bitmapUnknown;
@@ -324,9 +346,20 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 			margin = LinphoneUtils.pixelsToDpi(getActivity().getResources(), 10);
 			bitmapUnknown = BitmapFactory.decodeResource(getActivity().getResources(), R.drawable.unknown_small);
 		}
+		public void setData(List<Contact> contactsList, Cursor c)
+		{
+			contacts = contactsList;
+			cursor = c;
+			notifyDataSetChanged();
+		}
 		
 		public int getCount() {
-			return cursor.getCount();
+			if(contacts!= null)
+				return contacts.size();
+			else if (cursor != null)
+				return cursor.getCount();
+			else
+				return  0;
 		}
 
 		public Object getItem(int position) {
@@ -374,13 +407,13 @@ public class ContactsFragment extends Fragment implements OnClickListener, OnIte
 			}
 			
 			ImageView icon = (ImageView) view.findViewById(R.id.icon);
-			String rawContactId = ContactsManager.getInstance().findRawContactID(getActivity().getContentResolver(), String.valueOf(contact.getID()));
+			//String rawContactId = ContactsManager.getInstance().findRawContactID(getActivity().getContentResolver(), String.valueOf(contact.getID()));
 			if (contact.getPhoto() != null) {
 				icon.setImageBitmap(contact.getPhoto());
 			} else if (contact.getPhotoUri() != null) {
 				icon.setImageURI(contact.getPhotoUri());
-			} else if(ContactsManager.picture_exists_in_storage_for_contact(rawContactId)) {
-				icon.setImageBitmap(ContactsManager.get_bitmap_by_contact_resource_id(rawContactId));
+			//} else if(ContactsManager.picture_exists_in_storage_for_contact(rawContactId)) {
+			//	icon.setImageBitmap(ContactsManager.get_bitmap_by_contact_resource_id(rawContactId));
 			}else{
 				icon.setImageBitmap(bitmapUnknown);
 			}

@@ -128,17 +128,12 @@ public class ContactFragment extends Fragment implements OnClickListener {
 		TextView contactName = (TextView) view.findViewById(R.id.contactName);
 		contactName.setText(contact.getName());
 		final ImageView contactStarred = (ImageView) view.findViewById(R.id.contactStarred);
-		for(Contact contact: ContactsManager.getInstance().getFavoriteContacts()){
-			if(contactID==Integer.parseInt(contact.getID())){
-				((ImageView)contactStarred).setImageResource(R.drawable.selected_star);
-				contact.setFavorite(true);
-				break;
-			}else{
-				((ImageView)contactStarred).setImageResource(R.drawable.unselected_star);
-				contact.setFavorite(false);
-				break;
-			}
-		}
+		if(contact.isFavorite())
+			((ImageView)contactStarred).setImageResource(R.drawable.selected_star);
+		else
+			((ImageView)contactStarred).setImageResource(R.drawable.unselected_star);
+
+
 		contactStarred.setOnClickListener(new View.OnClickListener(){
 			@Override
 			public void onClick(View v) {

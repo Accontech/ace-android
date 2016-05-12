@@ -617,37 +617,41 @@ public class ContactsManager {
 
 	}
 
-	public synchronized void prepareContactsInBackground() {
-		if (contactCursor != null) {
-			contactCursor.close();
-		}
-		if (sipContactCursor != null) {
-			sipContactCursor.close();
-		}
-		if (favoriteContactCursor != null) {
-			favoriteContactCursor.close();
-		}
 
-		contactCursor = Compatibility.getContactsCursor(contentResolver, getContactsId());
-		favoriteContactCursor = Compatibility.getFavoriteContactsCursor(contentResolver, getContactsId());
-		sipContactCursor = Compatibility.getSIPContactsCursor(contentResolver, getContactsId());
+	boolean isPreparingContacts;
+
+	public synchronized void prepareContactsInBackground() {
+		if(isPreparingContacts)
+			return;
+		isPreparingContacts = true;
+
 		Thread sipContactsHandler = new Thread(new Runnable() {
 			@Override
 			public void run() {
+				long before = System.currentTimeMillis();
+				Cursor contactCursor = Compatibility.getContactsCursor(contentResolver, null);
+				Cursor favoriteContactCursor = Compatibility.getFavoriteContactsCursor(contentResolver, null);
+				Cursor sipContactCursor = Compatibility.getSIPContactsCursor(contentResolver, null);
+
+				ArrayList<Contact> contactList = new ArrayList<Contact>();
+				ArrayList<Contact> sipContactList = new ArrayList<Contact>();
+				ArrayList<Contact> favoriteContactList = new ArrayList<Contact>();
+
+
 				if(sipContactCursor != null && sipContactCursor.getCount() > 0) {
 					for (int i = 0; i < sipContactCursor.getCount(); i++) {
 						Contact contact = Compatibility.getContact(contentResolver, sipContactCursor, i);
 						if (contact == null)
 							continue;
 
-						contact.refresh(contentResolver);
+						//contact.refresh(contentResolver);
 						//Add tag to Linphone contact if it not existed
-						if (LinphoneActivity.isInstanciated()) {
-							if (!isContactHasLinphoneTag(contact, contentResolver)) {
-								Compatibility.createLinphoneContactTag(context, contentResolver, contact,
-										findRawContactID(contentResolver, String.valueOf(contact.getID())));
-							}
-						}
+//						if (LinphoneActivity.isInstanciated()) {
+//							if (!isContactHasLinphoneTag(contact, contentResolver)) {
+//								Compatibility.createLinphoneContactTag(context, contentResolver, contact,
+//										findRawContactID(contentResolver, String.valueOf(contact.getID())));
+//							}
+//						}
 
 						sipContactList.add(contact);
 					}
@@ -658,14 +662,14 @@ public class ContactsManager {
 						if (contact == null)
 							continue;
 
-						contact.refresh(contentResolver);
+						//contact.refresh(contentResolver);
 						//Add tag to Linphone contact if it not existed
-						if (LinphoneActivity.isInstanciated()) {
-							if (!isContactHasLinphoneTag(contact, contentResolver)) {
-								Compatibility.createLinphoneContactTag(context, contentResolver, contact,
-										findRawContactID(contentResolver, String.valueOf(contact.getID())));
-							}
-						}
+//						if (LinphoneActivity.isInstanciated()) {
+//							if (!isContactHasLinphoneTag(contact, contentResolver)) {
+//								Compatibility.createLinphoneContactTag(context, contentResolver, contact,
+//										findRawContactID(contentResolver, String.valueOf(contact.getID())));
+//							}
+//						}
 
 						favoriteContactList.add(contact);
 					}
@@ -677,29 +681,64 @@ public class ContactsManager {
 							continue;
 
 						//Remove linphone contact tag if the contact has no sip address
-						if (LinphoneActivity.isInstanciated()) {
-							if (removeContactTagIsNeeded(contact) && findRawLinphoneContactID(contact.getID()) != null) {
-								removeLinphoneContactTag(contact);
-							}
-						}
-						for (Contact c : sipContactList) {
-							if (c != null && c.getID().equals(contact.getID())) {
-								contact = c;
-								break;
-							}
-						}
+//						if (LinphoneActivity.isInstanciated()) {
+//							if (removeContactTagIsNeeded(contact) && findRawLinphoneContactID(contact.getID()) != null) {
+//								removeLinphoneContactTag(contact);
+//							}
+//						}
+//						for (Contact c : sipContactList) {
+//							if (c != null && c.getID().equals(contact.getID())) {
+//								contact = c;
+//								break;
+//							}
+//						}
 						contactList.add(contact);
 					}
+					ContactsManager.this.contactList = contactList;
+					ContactsManager.this.sipContactList = sipContactList;
+					ContactsManager.this.favoriteContactList = favoriteContactList;
+
+					if (contactCursor != null) {
+						contactCursor.close();
+					}
+					if (sipContactCursor != null) {
+						sipContactCursor.close();
+					}
+					if (favoriteContactCursor != null) {
+						favoriteContactCursor.close();
+					}
+
+					ContactsManager.this.contactCursor = contactCursor;
+					ContactsManager.this.sipContactCursor = sipContactCursor;
+					ContactsManager.this.favoriteContactCursor = favoriteContactCursor;
+
+					long after = System.currentTimeMillis();
+					Log.d("Prepare contact took: " + (after - before));
+
+					isPreparingContacts = false;
+					if(mContactsListener != null)
+						mContactsListener.onContactsLoaded();
 				}
+
 			}
 		});
 
-		contactList = new ArrayList<Contact>();
-		sipContactList = new ArrayList<Contact>();
-		favoriteContactList = new ArrayList<Contact>();
+//		contactList = new ArrayList<Contact>();
+//		sipContactList = new ArrayList<Contact>();
+//		favoriteContactList = new ArrayList<Contact>();
 
 		sipContactsHandler.start();
 	}
+	ContactLoadingListener mContactsListener;
+	public void setContactListener(ContactLoadingListener l)
+	{
+		mContactsListener = l;
+	}
+	public static interface ContactLoadingListener
+	{
+		public void onContactsLoaded();
+	}
+
 
 	public static String queryAddressOrNumber(ContentResolver resolver, Uri contactUri) {
 		// Phone Numbers
